@@ -156,17 +156,6 @@
             margin-top: 15px;
         }
 
-        .aviso-bloqueio {
-            background-color: #FDEDEC;
-            border: 1px solid #F5B7B1;
-            color: #C0392B;
-            padding: 15px;
-            border-radius: 4px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 15px;
-        }
-
         /* ESTILOS PARA GERENCIAMENTO DE BLOQUEIOS NA LISTA DE VEÍCULOS */
         .veiculo-card-admin {
             background: #F9F9F9;
@@ -208,9 +197,37 @@
             font-size: 0.75rem;
             cursor: pointer;
         }
+        
+        /* LOADING OVERLAY */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498DB;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <!-- TELA DE CARREGAMENTO INICIAL -->
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p id="loading-text" style="font-weight: bold; font-size: 0.85rem;">CONECTANDO AO GOOGLE SHEETS...</p>
+    </div>
 
     <header id="main-header" class="hidden">
         <h2>SISTEMA DE RESERVA DE VEÍCULOS</h2>
@@ -224,7 +241,7 @@
     <div class="container">
         
         <!-- TELA DE LOGIN -->
-        <div id="tela-login" class="panel login-box">
+        <div id="tela-login" class="panel login-box hidden">
             <h3>ACESSO AO SISTEMA</h3>
             <form onsubmit="fazerLogin(event)">
                 <div class="form-group">
@@ -378,11 +395,6 @@
         <div id="tela-agendamento" class="panel hidden">
             <h3>NOVO AGENDAMENTO DE VEÍCULO</h3>
             
-            <!-- CAIXA DE TEXTO DE BLOQUEIO -->
-            <div id="aviso-bloqueio-depto" class="aviso-bloqueio hidden">
-                ENTRAR EM CONTATO COM DEPARTAMENTO DE LOGÍSTICA
-            </div>
-
             <form id="form-agendamento" onsubmit="salvarAgendamento(event)">
                 
                 <div class="form-group">
@@ -450,21 +462,57 @@
     </div>
 
     <script>
-        // BANCO DE DADOS LOCAL (LOCALSTORAGE)
-        let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
-            { nome: 'ADMIN', senha: '123', permissao: 'admin', departamento: 'GERÊNCIA', primeiroAcesso: false }
-        ];
-        let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
-        let agendamentos = JSON.parse(localStorage.getItem('agendamentos')) || [];
+        // URL DO GOOGLE APPS SCRIPT (CONECTADO AO GOOGLE SHEETS)
+        // COLE A SUA URL WEB APP DO GOOGLE APPS SCRIPT ABAIXO ENTRE AS ASPAS:
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxlfhF1LUapQ3i6wHnFkUK3SUe0Jp8q3SEUiZLFKPcH2pMYzfQ_t7sF0ZSG830Q9Lap/exec";
+
+        let usuarios = [];
+        let veiculos = [];
+        let agendamentos = [];
         
         let usuarioLogado = null;
         let dataAtualCalendario = new Date(); 
+
+        // --- CARREGAMENTO INICIAL DOS DADOS DA NUVEM (GOOGLE SHEETS) ---
+        window.onload = function() {
+            if (WEB_APP_URL.includes("https://script.google.com/macros/s/AKfycbxlfhF1LUapQ3i6wHnFkUK3SUe0Jp8q3SEUiZLFKPcH2pMYzfQ_t7sF0ZSG830Q9Lap/exec")) {
+                document.getElementById('loading-overlay').innerHTML = `
+                    <div style="padding: 20px; text-align: max-width: 500px;">
+                        <h3 style="color: #C0392B;">CONFIGURAÇÃO NECESSÁRIA</h3>
+                        <p style="font-size: 0.85rem; line-height: 1.4;">Você precisa inserir a URL do seu Google Apps Script na variável <strong>WEB_APP_URL</strong> dentro do código JavaScript para conectar a plataforma ao Google Sheets.</p>
+                    </div>
+                `;
+                return;
+            }
+            carregarDadosDoGoogleSheets();
+        };
+
+        function carregarDadosDoGoogleSheets() {
+            fetch(WEB_APP_URL + "?action=obterDados")
+                .then(response => response.json())
+                .then(data => {
+                    usuarios = data.usuarios || [];
+                    veiculos = data.veiculos || [];
+                    agendamentos = data.agendamentos || [];
+
+                    // Garantir usuário admin padrão caso planilha esteja vazia
+                    if (usuarios.length === 0) {
+                        usuarios.push({ nome: 'ADMIN', senha: '123', permissao: 'admin', departamento: 'GERÊNCIA', primeiroAcesso: false });
+                    }
+
+                    document.getElementById('loading-overlay').classList.add('hidden');
+                    navegar('tela-login');
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar dados:', error);
+                    document.getElementById('loading-text').innerText = "ERRO AO CONECTAR. TENTE ATUALIZAR A PÁGINA.";
+                });
+        }
 
         // --- SISTEMA DE LOGIN E NAVEGAÇÃO ---
         function fazerLogin(event) {
             event.preventDefault();
             
-            usuarios = JSON.parse(localStorage.getItem('usuarios')) || usuarios;
             const user = document.getElementById('login-user').value.toUpperCase();
             const pass = document.getElementById('login-senha').value.toUpperCase();
             const erro = document.getElementById('login-erro');
@@ -475,7 +523,7 @@
                 usuarioLogado = validUser;
                 erro.style.display = 'none';
 
-                if (validUser.primeiroAcesso === true) {
+                if (validUser.primeiroAcesso === true || validUser.primeiroAcesso === "true") {
                     navegar('tela-primeiro-acesso');
                     return;
                 }
@@ -495,7 +543,9 @@
                 usuarios[index].senha = novaSenha;
                 usuarios[index].primeiroAcesso = false; 
                 usuarioLogado = usuarios[index];
-                localStorage.setItem('usuarios', JSON.stringify(usuarios));
+                
+                // Salvar alteração na nuvem
+                salvarDadosNaNuvem('atualizarUsuario', usuarios[index]);
             }
 
             alert('SENHA ALTERADA COM SUCESSO!');
@@ -547,7 +597,8 @@
                 alert('ESTE USUÁRIO JÁ EXISTE!'); return;
             }
             usuarios.push(novoUsuario);
-            localStorage.setItem('usuarios', JSON.stringify(usuarios));
+            salvarDadosNaNuvem('adicionarUsuario', novoUsuario);
+
             alert('USUÁRIO CADASTRADO COM SUCESSO!');
             event.target.reset();
             renderizarListaUsuarios();
@@ -567,7 +618,7 @@
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
-                    let importados = 0;
+                    let novosImportados = [];
                     for (let i = 1; i < json.length; i++) {
                         const row = json[i];
                         if (row && row.length >= 4) {
@@ -577,22 +628,23 @@
                             const departamento = String(row[3]).trim().toUpperCase();
 
                             if (nome && senha && !usuarios.some(u => u.nome === nome)) {
-                                usuarios.push({
+                                let objU = {
                                     nome: nome,
                                     senha: senha,
                                     permissao: permissao === 'admin' ? 'admin' : 'motorista',
                                     departamento: departamento,
                                     primeiroAcesso: true
-                                });
-                                importados++;
+                                };
+                                usuarios.push(objU);
+                                novosImportados.push(objU);
                             }
                         }
                     }
 
-                    localStorage.setItem('usuarios', JSON.stringify(usuarios));
+                    salvarDadosNaNuvem('loteUsuarios', novosImportados);
                     renderizarListaUsuarios();
                     renderizarListaVeiculos();
-                    alert(`${importados} USUÁRIOS IMPORTADOS COM SUCESSO!`);
+                    alert(`${novosImportados.length} USUÁRIOS IMPORTADOS COM SUCESSO!`);
                     event.target.value = '';
                 } catch (err) {
                     alert('ERRO AO LER O ARQUIVO EXCEL DE USUÁRIOS.');
@@ -620,8 +672,8 @@
 
         function excluirUsuario(index) {
             if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE USUÁRIO?')) {
-                usuarios.splice(index, 1);
-                localStorage.setItem('usuarios', JSON.stringify(usuarios));
+                let removido = usuarios.splice(index, 1)[0];
+                salvarDadosNaNuvem('excluirUsuario', removido);
                 renderizarListaUsuarios();
                 renderizarListaVeiculos();
             }
@@ -635,7 +687,8 @@
                 bloqueio: ''
             };
             veiculos.push(novoVeiculo);
-            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+            salvarDadosNaNuvem('adicionarVeiculo', novoVeiculo);
+
             alert('VEÍCULO CADASTRADO COM SUCESSO!');
             event.target.reset();
             renderizarListaVeiculos();
@@ -654,7 +707,7 @@
                     const worksheet = workbook.Sheets[firstSheetName];
                     const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
 
-                    let importados = 0;
+                    let novosImportados = [];
                     for (let i = 1; i < json.length; i++) {
                         const row = json[i];
                         if (row && row.length >= 2) {
@@ -662,19 +715,20 @@
                             const placa = String(row[1]).trim().toUpperCase();
 
                             if (modelo && placa && !veiculos.some(v => v.placa === placa)) {
-                                veiculos.push({
+                                let objV = {
                                     modelo: modelo,
                                     placa: placa,
                                     bloqueio: ''
-                                });
-                                importados++;
+                                };
+                                veiculos.push(objV);
+                                novosImportados.push(objV);
                             }
                         }
                     }
 
-                    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+                    salvarDadosNaNuvem('loteVeiculos', novosImportados);
                     renderizarListaVeiculos();
-                    alert(`${importados} VEÍCULOS IMPORTADOS COM SUCESSO!`);
+                    alert(`${novosImportados.length} VEÍCULOS IMPORTADOS COM SUCESSO!`);
                     event.target.value = '';
                 } catch (err) {
                     alert('ERRO AO LER O ARQUIVO EXCEL DE VEÍCULOS.');
@@ -739,13 +793,13 @@
             });
 
             veiculos[veiculoIndex].bloqueio = deptosBloqueados.join(', ');
-            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+            salvarDadosNaNuvem('atualizarVeiculo', veiculos[veiculoIndex]);
         }
 
         function excluirVeiculo(index) {
             if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE VEÍCULO?')) {
-                veiculos.splice(index, 1);
-                localStorage.setItem('veiculos', JSON.stringify(veiculos));
+                let removido = veiculos.splice(index, 1)[0];
+                salvarDadosNaNuvem('excluirVeiculo', removido);
                 renderizarListaVeiculos();
             }
         }
@@ -783,8 +837,8 @@
 
         function excluirAgendamentoLog(index) {
             if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE AGENDAMENTO? ESTA AÇÃO REMOVERÁ A RESERVA DO CALENDÁRIO.')) {
-                agendamentos.splice(index, 1);
-                localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+                let removido = agendamentos.splice(index, 1)[0];
+                salvarDadosNaNuvem('excluirAgendamento', removido);
                 renderizarLogs();
             }
         }
@@ -802,7 +856,6 @@
                 select.innerHTML += '<option disabled>NENHUM VEÍCULO CADASTRADO</option>';
             }
 
-            document.getElementById('aviso-bloqueio-depto').classList.add('hidden');
             document.getElementById('campos-formulario-agendamento').classList.remove('hidden');
             document.getElementById('form-agendamento').reset();
 
@@ -812,11 +865,9 @@
         function verificarBloqueioVeiculo() {
             const selectVeiculo = document.getElementById('select-veiculo');
             const placaSelecionada = selectVeiculo.value;
-            const avisoBox = document.getElementById('aviso-bloqueio-depto');
             const camposForm = document.getElementById('campos-formulario-agendamento');
 
             if (!placaSelecionada) {
-                avisoBox.classList.add('hidden');
                 camposForm.classList.remove('hidden');
                 return;
             }
@@ -827,15 +878,9 @@
                 const deptoUsuario = usuarioLogado.departamento.toUpperCase();
 
                 if (departamentosBloqueados.includes(deptoUsuario)) {
-                    avisoBox.classList.remove('hidden');
-                    camposForm.classList.add('hidden');
-                } else {
-                    avisoBox.classList.add('hidden');
-                    camposForm.classList.remove('hidden');
+                    alert('ESTE VEÍCULO ESTÁ BLOQUEADO PARA O SEU DEPARTAMENTO.');
+                    selectVeiculo.value = "";
                 }
-            } else {
-                avisoBox.classList.add('hidden');
-                camposForm.classList.remove('hidden');
             }
         }
 
@@ -863,7 +908,7 @@
                 const departamentosBloqueados = veiculoObj.bloqueio.split(',').map(d => d.trim().toUpperCase());
                 const deptoUsuario = usuarioLogado.departamento.toUpperCase();
                 if (departamentosBloqueados.includes(deptoUsuario)) {
-                    alert('ENTRAR EM CONTATO COM DEPARTAMENTO DE LOGÍSTICA');
+                    alert('ESTE VEÍCULO ESTÁ BLOQUEADO PARA O SEU DEPARTAMENTO.');
                     return;
                 }
             }
@@ -883,7 +928,7 @@
             };
 
             agendamentos.push(novoAgendamento);
-            localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+            salvarDadosNaNuvem('adicionarAgendamento', novoAgendamento);
             
             alert('AGENDAMENTO REALIZADO!');
             event.target.reset();
@@ -965,6 +1010,16 @@
 
         function fecharDetalhes() {
             document.getElementById('modal-detalhes').classList.add('hidden');
+        }
+
+        // --- COMUNICAÇÃO COM O GOOGLE SHEETS (APPS SCRIPT) ---
+        function salvarDadosNaNuvem(acao, dados) {
+            fetch(WEB_APP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: acao, payload: dados })
+            }).catch(err => console.error("Erro ao sincronizar com Google Sheets:", err));
         }
     </script>
 </body>
