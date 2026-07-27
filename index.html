@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CONTROLE E RESERVA DE VEÍCULOS</title>
+    <!-- BIBLIOTECA PARA LEITURA DE EXCEL (XLSX) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-transform: uppercase;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F4F4F9;
+            color: #333;
+        }
+
+        header {
+            background-color: #2C3E50;
+            color: #FFF;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button {
+            cursor: pointer;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498DB;
+            color: white;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button:hover { background-color: #2980B9; }
+        button.admin-btn { background-color: #E67E22; }
+        button.admin-btn:hover { background-color: #D35400; }
+        button.cancel-btn { background-color: #E74C3C; }
+        button.cancel-btn:hover { background-color: #C0392B; }
+
+        .container { padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .hidden { display: none !important; }
+
+        .panel {
+            background: #FFF;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+        
+        .login-box { max-width: 400px; margin: 100px auto; text-align: center; }
+
+        .main-menu {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 50px;
+        }
+        .main-menu button { padding: 30px 40px; font-size: 1.2rem; }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #CCC;
+            border-radius: 4px;
+        }
+
+        /* CALENDÁRIO */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+        }
+        .calendar-day {
+            border: 1px solid #DDD;
+            min-height: 100px;
+            padding: 5px;
+            background: #FAFAFA;
+            font-weight: bold;
+        }
+        .calendar-day-header { font-weight: bold; text-align: center; background: #EEE; padding: 5px 0; }
+        
+        .agendamento-chip {
+            background-color: #2ECC71;
+            color: white;
+            padding: 4px;
+            font-size: 0.7rem;
+            margin-top: 5px;
+            border-radius: 3px;
+            cursor: pointer;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-content {
+            background: #FFF;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            max-width: 90%;
+            text-align: center;
+        }
+        .modal-content p { text-align: left; margin: 5px 0; font-size: 0.85rem; }
+
+        .lista-cadastros { list-style: none; padding: 0; margin-top: 20px; max-height: 200px; overflow-y: auto; }
+        .lista-cadastros li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #F9F9F9;
+            padding: 10px;
+            margin-bottom: 5px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .tabela-logs { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.85rem; }
+        .tabela-logs th, .tabela-logs td { border: 1px solid #DDD; padding: 10px; text-align: left; }
+        .tabela-logs th { background: #EEE; font-weight: bold; }
+        .tabela-logs tr:nth-child(even) { background: #F9F9F9; }
+        
+        .excel-upload-box {
+            background: #F8F9FA;
+            border: 2px dashed #CBD5E1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+        }
+
+        .aviso-bloqueio {
+            background-color: #FDEDEC;
+            border: 1px solid #F5B7B1;
+            color: #C0392B;
+            padding: 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        /* ESTILOS PARA GERENCIAMENTO DE BLOQUEIOS NA LISTA DE VEÍCULOS */
+        .veiculo-card-admin {
+            background: #F9F9F9;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid #DDD;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+        .veiculo-info-topo {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .secao-bloqueios-admin {
+            background: #FFF;
+            padding: 8px;
+            border: 1px solid #E2E8F0;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+        .checkbox-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 5px;
+            max-height: 100px;
+            overflow-y: auto;
+            padding: 5px;
+            background: #FAFAFA;
+            border: 1px solid #EEE;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="main-header" class="hidden">
+        <h2>SISTEMA DE RESERVA DE VEÍCULOS</h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="user-info" style="font-size: 0.9rem;"></span>
+            <button id="btn-admin" class="admin-btn hidden" onclick="navegar('painel-admin')">CONFIGURAÇÕES (ADMIN)</button>
+            <button class="cancel-btn" onclick="fazerLogout()">SAIR</button>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- TELA DE LOGIN -->
+        <div id="tela-login" class="panel login-box">
+            <h3>ACESSO AO SISTEMA</h3>
+            <form onsubmit="fazerLogin(event)">
+                <div class="form-group">
+                    <label>USUÁRIO</label>
+                    <input type="text" id="login-user" required>
+                </div>
+                <div class="form-group">
+                    <label>SENHA</label>
+                    <input type="password" id="login-senha" required>
+                </div>
+                <button type="submit" style="width: 100%;">ENTRAR</button>
+            </form>
+            <p id="login-erro" style="color: red; font-size: 0.8rem; margin-top: 10px; display: none;">USUÁRIO OU SENHA INCORRETOS.</p>
+        </div>
+
+        <!-- TELA PRIMEIRO ACESSO (DEFINIR NOVA SENHA) -->
+        <div id="tela-primeiro-acesso" class="panel login-box hidden">
+            <h3>PRIMEIRO ACESSO</h3>
+            <p style="font-size: 0.85rem; color: #555;">VOCÊ PRECISA DEFINIR UMA NOVA SENHA PARA CONTINUAR.</p>
+            <form onsubmit="salvarNovaSenhaPrimeiroAcesso(event)">
+                <div class="form-group">
+                    <label>NOVA SENHA</label>
+                    <input type="password" id="novo-primeiro-senha" required>
+                </div>
+                <button type="submit" style="width: 100%;">SALVAR E ENTRAR</button>
+            </form>
+        </div>
+
+        <!-- TELA INICIAL -->
+        <div id="tela-inicial" class="panel main-menu hidden">
+            <button onclick="prepararCalendario()">VISUALIZAR AGENDAMENTOS</button>
+            <button onclick="prepararAgendamento()">FAZER AGENDAMENTO</button>
+        </div>
+
+        <!-- PAINEL ADMINISTRADOR -->
+        <div id="painel-admin" class="panel hidden">
+            <h3>PAINEL DE CONFIGURAÇÕES - ADMINISTRADOR</h3>
+            
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <!-- CADASTRO DE USUÁRIO MANUAL E VIA EXCEL -->
+                <div style="flex: 1; min-width: 300px; border-right: 1px solid #CCC; padding-right: 20px;">
+                    <h4>CADASTRAR USUÁRIO</h4>
+                    <form onsubmit="salvarUsuario(event)">
+                        <div class="form-group">
+                            <label>NOME DO USUÁRIO</label>
+                            <input type="text" id="cad-nome" required>
+                        </div>
+                        <div class="form-group">
+                            <label>SENHA PROVISÓRIA</label>
+                            <input type="password" id="cad-senha" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CATEGORIA / PERMISSÃO</label>
+                            <select id="cad-permissao" required>
+                                <option value="motorista">MOTORISTA</option>
+                                <option value="admin">ADMINISTRADOR</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>DEPARTAMENTO (OBRIGATÓRIO)</label>
+                            <input type="text" id="cad-depto" required>
+                        </div>
+                        <button type="submit">SALVAR USUÁRIO</button>
+                    </form>
+
+                    <!-- IMPORTAR USUÁRIOS VIA EXCEL -->
+                    <div class="excel-upload-box">
+                        <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:5px;">IMPORTAR USUÁRIOS (EXCEL)</label>
+                        <p style="font-size:0.7rem; color:#666; margin-bottom:5px;">COLUNAS: NOME, SENHA, PERMISSAO, DEPARTAMENTO</p>
+                        <input type="file" id="excel-usuarios" accept=".xlsx, .xls" style="font-size:0.75rem;" onchange="importarUsuariosExcel(event)">
+                    </div>
+
+                    <ul id="lista-usuarios" class="lista-cadastros"></ul>
+                </div>
+
+                <!-- CADASTRO DE VEÍCULO MANUAL E VIA EXCEL -->
+                <div style="flex: 1; min-width: 300px;">
+                    <h4>CADASTRAR VEÍCULO</h4>
+                    <form onsubmit="salvarVeiculo(event)">
+                        <div class="form-group">
+                            <label>MODELO DO VEÍCULO</label>
+                            <input type="text" id="cad-modelo" required>
+                        </div>
+                        <div class="form-group">
+                            <label>PLACA</label>
+                            <input type="text" id="cad-placa" required>
+                        </div>
+                        <button type="submit">SALVAR VEÍCULO</button>
+                    </form>
+
+                    <!-- IMPORTAR VEÍCULOS VIA EXCEL -->
+                    <div class="excel-upload-box">
+                        <label style="font-size:0.8rem; font-weight:bold; display:block; margin-bottom:5px;">IMPORTAR VEÍCULOS (EXCEL)</label>
+                        <p style="font-size:0.7rem; color:#666; margin-bottom:5px;">COLUNAS: MODELO, PLACA</p>
+                        <input type="file" id="excel-veiculos" accept=".xlsx, .xls" style="font-size:0.75rem;" onchange="importarVeiculosExcel(event)">
+                    </div>
+
+                    <h4 style="margin-top: 20px;">GERENCIAR VEÍCULOS E BLOQUEIOS</h4>
+                    <div id="lista-veiculos" style="max-height: 250px; overflow-y: auto; margin-top: 10px;"></div>
+                </div>
+            </div>
+
+            <!-- LOG DE AGENDAMENTOS GERAL -->
+            <div style="margin-top: 30px; border-top: 1px solid #CCC; padding-top: 20px;">
+                <h4>LOG DE AGENDAMENTOS GERAL</h4>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table class="tabela-logs">
+                        <thead>
+                            <tr>
+                                <th>DATA</th>
+                                <th>HORÁRIO</th>
+                                <th>MOTORISTA</th>
+                                <th>VEÍCULO</th>
+                                <th>MOTIVO</th>
+                                <th>AÇÕES</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lista-logs"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <br>
+            <button class="cancel-btn" onclick="navegar('tela-inicial')">VOLTAR</button>
+        </div>
+
+        <!-- TELA DE CALENDÁRIO -->
+        <div id="tela-calendario" class="panel hidden">
+            <div class="calendar-header">
+                <button onclick="mudarMes(-1)">&laquo; MÊS ANTERIOR</button>
+                <h3 id="mes-ano-display">MÊS ANO</h3>
+                <button onclick="mudarMes(1)">PRÓXIMO MÊS &raquo;</button>
+            </div>
+            
+            <div class="calendar-grid" style="margin-bottom: 5px;">
+                <div class="calendar-day-header">DOM</div>
+                <div class="calendar-day-header">SEG</div>
+                <div class="calendar-day-header">TER</div>
+                <div class="calendar-day-header">QUA</div>
+                <div class="calendar-day-header">QUI</div>
+                <div class="calendar-day-header">SEX</div>
+                <div class="calendar-day-header">SÁB</div>
+            </div>
+
+            <div id="calendario-dias" class="calendar-grid"></div>
+            <br>
+            <button class="cancel-btn" onclick="navegar('tela-inicial')">VOLTAR</button>
+        </div>
+
+        <!-- TELA FAZER AGENDAMENTO -->
+        <div id="tela-agendamento" class="panel hidden">
+            <h3>NOVO AGENDAMENTO DE VEÍCULO</h3>
+            
+            <!-- CAIXA DE TEXTO DE BLOQUEIO -->
+            <div id="aviso-bloqueio-depto" class="aviso-bloqueio hidden">
+                ENTRAR EM CONTATO COM DEPARTAMENTO DE LOGÍSTICA
+            </div>
+
+            <form id="form-agendamento" onsubmit="salvarAgendamento(event)">
+                
+                <div class="form-group">
+                    <label>VEÍCULO</label>
+                    <select id="select-veiculo" onchange="verificarBloqueioVeiculo()" required></select>
+                </div>
+
+                <div id="campos-formulario-agendamento">
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label>DATA</label>
+                            <input type="date" id="ag-data" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>HORÁRIO DE SAÍDA</label>
+                            <input type="time" id="ag-saida" required>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>HORÁRIO DE RETORNO</label>
+                            <input type="time" id="ag-retorno" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>MOTIVO DO AGENDAMENTO</label>
+                        <textarea id="ag-motivo" rows="3" required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>HAVERÁ ACOMPANHANTE?</label>
+                        <select id="select-acompanhante" onchange="verificarAcompanhante()" required>
+                            <option value="nao">NÃO</option>
+                            <option value="sim">SIM</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group hidden" id="campo-acompanhantes">
+                        <label>NOME DOS ACOMPANHANTES</label>
+                        <textarea id="texto-acompanhantes" rows="2"></textarea>
+                    </div>
+
+                    <button type="submit" id="btn-salvar-agendamento">CONFIRMAR AGENDAMENTO</button>
+                </div>
+
+                <button type="button" class="cancel-btn" onclick="navegar('tela-inicial')" style="margin-top: 10px;">CANCELAR</button>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- MODAL DE DETALHES DO AGENDAMENTO -->
+    <div id="modal-detalhes" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3 style="margin-top:0;">DETALHES DO AGENDAMENTO</h3>
+            <p><strong>MOTORISTA:</strong> <span id="det-motorista"></span></p>
+            <p><strong>VEÍCULO:</strong> <span id="det-veiculo"></span></p>
+            <p><strong>DATA:</strong> <span id="det-data"></span></p>
+            <p><strong>SAÍDA:</strong> <span id="det-saida"></span></p>
+            <p><strong>RETORNO:</strong> <span id="det-retorno"></span></p>
+            <p><strong>MOTIVO:</strong> <span id="det-motivo"></span></p>
+            <p><strong>ACOMPANHANTES:</strong> <span id="det-acompanhantes"></span></p>
+            
+            <button onclick="fecharDetalhes()" style="width: 100%; margin-top: 15px;">FECHAR</button>
+        </div>
+    </div>
+
+    <script>
+        // BANCO DE DADOS LOCAL (LOCALSTORAGE)
+        let usuarios = JSON.parse(localStorage.getItem('usuarios')) || [
+            { nome: 'ADMIN', senha: '123', permissao: 'admin', departamento: 'GERÊNCIA', primeiroAcesso: false }
+        ];
+        let veiculos = JSON.parse(localStorage.getItem('veiculos')) || [];
+        let agendamentos = JSON.parse(localStorage.getItem('agendamentos')) || [];
+        
+        let usuarioLogado = null;
+        let dataAtualCalendario = new Date(); 
+
+        // --- SISTEMA DE LOGIN E NAVEGAÇÃO ---
+        function fazerLogin(event) {
+            event.preventDefault();
+            
+            usuarios = JSON.parse(localStorage.getItem('usuarios')) || usuarios;
+            const user = document.getElementById('login-user').value.toUpperCase();
+            const pass = document.getElementById('login-senha').value.toUpperCase();
+            const erro = document.getElementById('login-erro');
+            
+            const validUser = usuarios.find(u => u.nome === user && u.senha === pass);
+
+            if (validUser) {
+                usuarioLogado = validUser;
+                erro.style.display = 'none';
+
+                if (validUser.primeiroAcesso === true) {
+                    navegar('tela-primeiro-acesso');
+                    return;
+                }
+
+                concluirLogin();
+            } else {
+                erro.style.display = 'block';
+            }
+        }
+
+        function salvarNovaSenhaPrimeiroAcesso(event) {
+            event.preventDefault();
+            const novaSenha = document.getElementById('novo-primeiro-senha').value.toUpperCase();
+
+            const index = usuarios.findIndex(u => u.nome === usuarioLogado.nome);
+            if (index !== -1) {
+                usuarios[index].senha = novaSenha;
+                usuarios[index].primeiroAcesso = false; 
+                usuarioLogado = usuarios[index];
+                localStorage.setItem('usuarios', JSON.stringify(usuarios));
+            }
+
+            alert('SENHA ALTERADA COM SUCESSO!');
+            document.getElementById('novo-primeiro-senha').value = '';
+            concluirLogin();
+        }
+
+        function concluirLogin() {
+            document.getElementById('user-info').innerText = `OLÁ, ${usuarioLogado.nome} (${usuarioLogado.departamento})`;
+            document.getElementById('main-header').classList.remove('hidden');
+            
+            if(usuarioLogado.permissao === 'admin') {
+                document.getElementById('btn-admin').classList.remove('hidden');
+                renderizarListaVeiculos(); 
+                renderizarListaUsuarios();
+                renderizarLogs();
+            } else {
+                document.getElementById('btn-admin').classList.add('hidden');
+            }
+            navegar('tela-inicial');
+        }
+
+        function fazerLogout() {
+            usuarioLogado = null;
+            document.getElementById('main-header').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-senha').value = '';
+            navegar('tela-login');
+        }
+
+        function navegar(telaId) {
+            const telas = ['tela-login', 'tela-primeiro-acesso', 'tela-inicial', 'painel-admin', 'tela-calendario', 'tela-agendamento'];
+            telas.forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById(telaId).classList.remove('hidden');
+        }
+
+        // --- PAINEL DO ADMINISTRADOR (USUÁRIOS E VEÍCULOS) ---
+        function salvarUsuario(event) {
+            event.preventDefault();
+            const novoUsuario = {
+                nome: document.getElementById('cad-nome').value.toUpperCase(),
+                senha: document.getElementById('cad-senha').value.toUpperCase(),
+                permissao: document.getElementById('cad-permissao').value,
+                departamento: document.getElementById('cad-depto').value.toUpperCase(),
+                primeiroAcesso: true 
+            };
+
+            if (usuarios.some(u => u.nome === novoUsuario.nome)) {
+                alert('ESTE USUÁRIO JÁ EXISTE!'); return;
+            }
+            usuarios.push(novoUsuario);
+            localStorage.setItem('usuarios', JSON.stringify(usuarios));
+            alert('USUÁRIO CADASTRADO COM SUCESSO!');
+            event.target.reset();
+            renderizarListaUsuarios();
+            renderizarListaVeiculos();
+        }
+
+        function importarUsuariosExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                    let importados = 0;
+                    for (let i = 1; i < json.length; i++) {
+                        const row = json[i];
+                        if (row && row.length >= 4) {
+                            const nome = String(row[0]).trim().toUpperCase();
+                            const senha = String(row[1]).trim().toUpperCase();
+                            const permissao = String(row[2]).trim().toLowerCase();
+                            const departamento = String(row[3]).trim().toUpperCase();
+
+                            if (nome && senha && !usuarios.some(u => u.nome === nome)) {
+                                usuarios.push({
+                                    nome: nome,
+                                    senha: senha,
+                                    permissao: permissao === 'admin' ? 'admin' : 'motorista',
+                                    departamento: departamento,
+                                    primeiroAcesso: true
+                                });
+                                importados++;
+                            }
+                        }
+                    }
+
+                    localStorage.setItem('usuarios', JSON.stringify(usuarios));
+                    renderizarListaUsuarios();
+                    renderizarListaVeiculos();
+                    alert(`${importados} USUÁRIOS IMPORTADOS COM SUCESSO!`);
+                    event.target.value = '';
+                } catch (err) {
+                    alert('ERRO AO LER O ARQUIVO EXCEL DE USUÁRIOS.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderizarListaUsuarios() {
+            const lista = document.getElementById('lista-usuarios');
+            lista.innerHTML = '';
+            usuarios.forEach((u, index) => {
+                let btnExcluir = u.nome !== 'ADMIN' 
+                    ? `<button class="cancel-btn" style="padding: 3px 8px; font-size: 0.7rem;" onclick="excluirUsuario(${index})">EXCLUIR</button>` 
+                    : `<span style="font-size:0.7rem; color:#888;">PADRÃO</span>`;
+                
+                lista.innerHTML += `
+                    <li>
+                        <span>${u.nome} (${u.departamento})</span>
+                        ${btnExcluir}
+                    </li>
+                `;
+            });
+        }
+
+        function excluirUsuario(index) {
+            if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE USUÁRIO?')) {
+                usuarios.splice(index, 1);
+                localStorage.setItem('usuarios', JSON.stringify(usuarios));
+                renderizarListaUsuarios();
+                renderizarListaVeiculos();
+            }
+        }
+
+        function salvarVeiculo(event) {
+            event.preventDefault();
+            const novoVeiculo = {
+                modelo: document.getElementById('cad-modelo').value.toUpperCase(),
+                placa: document.getElementById('cad-placa').value.toUpperCase(),
+                bloqueio: ''
+            };
+            veiculos.push(novoVeiculo);
+            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+            alert('VEÍCULO CADASTRADO COM SUCESSO!');
+            event.target.reset();
+            renderizarListaVeiculos();
+        }
+
+        function importarVeiculosExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+
+                    let importados = 0;
+                    for (let i = 1; i < json.length; i++) {
+                        const row = json[i];
+                        if (row && row.length >= 2) {
+                            const modelo = String(row[0]).trim().toUpperCase();
+                            const placa = String(row[1]).trim().toUpperCase();
+
+                            if (modelo && placa && !veiculos.some(v => v.placa === placa)) {
+                                veiculos.push({
+                                    modelo: modelo,
+                                    placa: placa,
+                                    bloqueio: ''
+                                });
+                                importados++;
+                            }
+                        }
+                    }
+
+                    localStorage.setItem('veiculos', JSON.stringify(veiculos));
+                    renderizarListaVeiculos();
+                    alert(`${importados} VEÍCULOS IMPORTADOS COM SUCESSO!`);
+                    event.target.value = '';
+                } catch (err) {
+                    alert('ERRO AO LER O ARQUIVO EXCEL DE VEÍCULOS.');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderizarListaVeiculos() {
+            const lista = document.getElementById('lista-veiculos');
+            lista.innerHTML = '';
+            
+            if (veiculos.length === 0) {
+                lista.innerHTML = '<p style="font-size: 0.8rem; color: #666; text-align: center;">NENHUM VEÍCULO CADASTRADO.</p>';
+                return;
+            }
+
+            const departamentosUnicos = [...new Set(usuarios.map(u => u.departamento.toUpperCase()))].sort();
+
+            veiculos.forEach((v, index) => {
+                let bloqueiosAtuais = v.bloqueio ? v.bloqueio.split(',').map(d => d.trim().toUpperCase()) : [];
+
+                let checkboxesHtml = '';
+                if (departamentosUnicos.length === 0) {
+                    checkboxesHtml = '<span style="font-size: 0.75rem; color: #888;">NENHUM DEPARTAMENTO CADASTRADO.</span>';
+                } else {
+                    departamentosUnicos.forEach(depto => {
+                        let checked = bloqueiosAtuais.includes(depto) ? 'checked' : '';
+                        checkboxesHtml += `
+                            <label class="checkbox-item">
+                                <input type="checkbox" value="${depto}" ${checked} onchange="atualizarBloqueioDoVeiculo(${index})">
+                                ${depto}
+                            </label>
+                        `;
+                    });
+                }
+
+                lista.innerHTML += `
+                    <div class="veiculo-card-admin" id="card-veiculo-${index}">
+                        <div class="veiculo-info-topo">
+                            <strong>${v.modelo} - ${v.placa}</strong>
+                            <button class="cancel-btn" style="padding: 3px 8px; font-size: 0.7rem;" onclick="excluirVeiculo(${index})">EXCLUIR</button>
+                        </div>
+                        <div class="secao-bloqueios-admin">
+                            <span style="font-size: 0.75rem; font-weight: bold; color: #555; display: block; margin-bottom: 3px;">BLOQUEAR DEPARTAMENTOS PARA ESTE VEÍCULO:</span>
+                            <div class="checkbox-grid" id="checkboxes-veiculo-${index}">
+                                ${checkboxesHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function atualizarBloqueioDoVeiculo(veiculoIndex) {
+            const container = document.getElementById(`checkboxes-veiculo-${veiculoIndex}`);
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]:checked');
+            
+            let deptosBloqueados = [];
+            checkboxes.forEach(cb => {
+                deptosBloqueados.push(cb.value);
+            });
+
+            veiculos[veiculoIndex].bloqueio = deptosBloqueados.join(', ');
+            localStorage.setItem('veiculos', JSON.stringify(veiculos));
+        }
+
+        function excluirVeiculo(index) {
+            if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE VEÍCULO?')) {
+                veiculos.splice(index, 1);
+                localStorage.setItem('veiculos', JSON.stringify(veiculos));
+                renderizarListaVeiculos();
+            }
+        }
+
+        // --- SISTEMA DE LOGS ---
+        function renderizarLogs() {
+            const tbody = document.getElementById('lista-logs');
+            tbody.innerHTML = '';
+
+            const agendamentosOrdenados = [...agendamentos].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+            if (agendamentosOrdenados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">NENHUM AGENDAMENTO REGISTRADO.</td></tr>';
+                return;
+            }
+
+            agendamentosOrdenados.forEach(ag => {
+                const originalIndex = agendamentos.indexOf(ag); 
+                let nomeCurtoVeiculo = ag.veiculo.split('-')[0].trim();
+                
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${formatarDataBR(ag.data)}</td>
+                        <td>${ag.saida} ÀS ${ag.retorno}</td>
+                        <td>${ag.motorista || "NÃO INFORMADO"}</td>
+                        <td>${nomeCurtoVeiculo}</td>
+                        <td>${ag.motivo}</td>
+                        <td>
+                            <button class="cancel-btn" style="padding: 3px 8px; font-size: 0.7rem;" onclick="excluirAgendamentoLog(${originalIndex})">EXCLUIR</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function excluirAgendamentoLog(index) {
+            if(confirm('TEM CERTEZA QUE DESEJA EXCLUIR ESTE AGENDAMENTO? ESTA AÇÃO REMOVERÁ A RESERVA DO CALENDÁRIO.')) {
+                agendamentos.splice(index, 1);
+                localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+                renderizarLogs();
+            }
+        }
+
+        // --- SISTEMA DE AGENDAMENTO ---
+        function prepararAgendamento() {
+            const select = document.getElementById('select-veiculo');
+            select.innerHTML = '<option value="">SELECIONE UM VEÍCULO</option>';
+            
+            veiculos.forEach(v => {
+                select.innerHTML += `<option value="${v.placa}">${v.modelo} - ${v.placa}</option>`;
+            });
+            
+            if (veiculos.length === 0) {
+                select.innerHTML += '<option disabled>NENHUM VEÍCULO CADASTRADO</option>';
+            }
+
+            document.getElementById('aviso-bloqueio-depto').classList.add('hidden');
+            document.getElementById('campos-formulario-agendamento').classList.remove('hidden');
+            document.getElementById('form-agendamento').reset();
+
+            navegar('tela-agendamento');
+        }
+
+        function verificarBloqueioVeiculo() {
+            const selectVeiculo = document.getElementById('select-veiculo');
+            const placaSelecionada = selectVeiculo.value;
+            const avisoBox = document.getElementById('aviso-bloqueio-depto');
+            const camposForm = document.getElementById('campos-formulario-agendamento');
+
+            if (!placaSelecionada) {
+                avisoBox.classList.add('hidden');
+                camposForm.classList.remove('hidden');
+                return;
+            }
+
+            const veiculoObj = veiculos.find(v => v.placa === placaSelecionada);
+            if (veiculoObj && veiculoObj.bloqueio) {
+                const departamentosBloqueados = veiculoObj.bloqueio.split(',').map(d => d.trim().toUpperCase());
+                const deptoUsuario = usuarioLogado.departamento.toUpperCase();
+
+                if (departamentosBloqueados.includes(deptoUsuario)) {
+                    avisoBox.classList.remove('hidden');
+                    camposForm.classList.add('hidden');
+                } else {
+                    avisoBox.classList.add('hidden');
+                    camposForm.classList.remove('hidden');
+                }
+            } else {
+                avisoBox.classList.add('hidden');
+                camposForm.classList.remove('hidden');
+            }
+        }
+
+        function verificarAcompanhante() {
+            const select = document.getElementById('select-acompanhante').value;
+            const campoTexto = document.getElementById('campo-acompanhantes');
+            const textarea = document.getElementById('texto-acompanhantes');
+            if (select === 'sim') {
+                campoTexto.classList.remove('hidden');
+                textarea.required = true;
+            } else {
+                campoTexto.classList.add('hidden');
+                textarea.required = false;
+                textarea.value = '';
+            }
+        }
+
+        function salvarAgendamento(event) {
+            event.preventDefault();
+            const selectVeiculo = document.getElementById('select-veiculo');
+            const veiculoPlaca = selectVeiculo.value;
+            
+            const veiculoObj = veiculos.find(v => v.placa === veiculoPlaca);
+            if (veiculoObj && veiculoObj.bloqueio) {
+                const departamentosBloqueados = veiculoObj.bloqueio.split(',').map(d => d.trim().toUpperCase());
+                const deptoUsuario = usuarioLogado.departamento.toUpperCase();
+                if (departamentosBloqueados.includes(deptoUsuario)) {
+                    alert('ENTRAR EM CONTATO COM DEPARTAMENTO DE LOGÍSTICA');
+                    return;
+                }
+            }
+
+            const veiculoNome = selectVeiculo.options[selectVeiculo.selectedIndex].text;
+
+            const novoAgendamento = {
+                motorista: usuarioLogado.nome,
+                veiculo: veiculoNome,
+                data: document.getElementById('ag-data').value, 
+                saida: document.getElementById('ag-saida').value,
+                retorno: document.getElementById('ag-retorno').value,
+                motivo: document.getElementById('ag-motivo').value.toUpperCase(),
+                acompanhantes: document.getElementById('select-acompanhante').value === 'sim' 
+                               ? document.getElementById('texto-acompanhantes').value.toUpperCase() 
+                               : 'NÃO'
+            };
+
+            agendamentos.push(novoAgendamento);
+            localStorage.setItem('agendamentos', JSON.stringify(agendamentos));
+            
+            alert('AGENDAMENTO REALIZADO!');
+            event.target.reset();
+            verificarAcompanhante();
+            navegar('tela-inicial');
+        }
+
+        // --- SISTEMA DE CALENDÁRIO ---
+        const meses = ["JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO", "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO"];
+
+        function prepararCalendario() {
+            dataAtualCalendario = new Date(); 
+            renderizarCalendario();
+            navegar('tela-calendario');
+        }
+
+        function mudarMes(direcao) {
+            dataAtualCalendario.setMonth(dataAtualCalendario.getMonth() + direcao);
+            renderizarCalendario();
+        }
+
+        function renderizarCalendario() {
+            const ano = dataAtualCalendario.getFullYear();
+            const mes = dataAtualCalendario.getMonth();
+            document.getElementById('mes-ano-display').innerText = `${meses[mes]} ${ano}`;
+
+            const grid = document.getElementById('calendario-dias');
+            grid.innerHTML = '';
+
+            const primeiroDiaDaSemana = new Date(ano, mes, 1).getDay();
+            const totalDiasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+            for (let i = 0; i < primeiroDiaDaSemana; i++) {
+                grid.innerHTML += `<div class="calendar-day" style="background: #EAEAEA; border: none;"></div>`;
+            }
+
+            for (let dia = 1; dia <= totalDiasNoMes; dia++) {
+                let mesFormatado = String(mes + 1).padStart(2, '0');
+                let diaFormatado = String(dia).padStart(2, '0');
+                let dataString = `${ano}-${mesFormatado}-${diaFormatado}`;
+                
+                let agendamentosDoDia = agendamentos.filter(ag => ag.data === dataString);
+                
+                let chipsHtml = '';
+                agendamentosDoDia.forEach(ag => {
+                    let nomeCurto = ag.veiculo.split('-')[0].trim(); 
+                    let motivoLimpo = ag.motivo.replace(/'/g, "").replace(/"/g, "");
+                    let acompLimpo = ag.acompanhantes.replace(/'/g, "").replace(/"/g, "");
+                    let motoristaLimpo = (ag.motorista || "NÃO INFORMADO").replace(/'/g, "").replace(/"/g, "");
+
+                    chipsHtml += `
+                        <div class="agendamento-chip" 
+                             onclick="abrirDetalhes('${motoristaLimpo}', '${ag.veiculo}', '${dataString}', '${ag.saida}', '${ag.retorno}', '${motivoLimpo}', '${acompLimpo}')">
+                             ${nomeCurto} (${ag.saida})
+                        </div>
+                    `;
+                });
+
+                grid.innerHTML += `<div class="calendar-day">${dia}${chipsHtml}</div>`;
+            }
+        }
+
+        function formatarDataBR(dataIso) {
+            const partes = dataIso.split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+
+        function abrirDetalhes(motorista, veiculo, data, saida, retorno, motivo, acompanhantes) {
+            document.getElementById('det-motorista').innerText = motorista;
+            document.getElementById('det-veiculo').innerText = veiculo;
+            document.getElementById('det-data').innerText = formatarDataBR(data);
+            document.getElementById('det-saida').innerText = saida;
+            document.getElementById('det-retorno').innerText = retorno;
+            document.getElementById('det-motivo').innerText = motivo;
+            document.getElementById('det-acompanhantes').innerText = acompanhantes;
+
+            document.getElementById('modal-detalhes').classList.remove('hidden');
+        }
+
+        function fecharDetalhes() {
+            document.getElementById('modal-detalhes').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
