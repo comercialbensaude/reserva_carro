@@ -16,12 +16,11 @@
         .btn { display: inline-block; padding: 12px 20px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; margin-top: 10px; font-weight: bold; font-size: 16px;}
         .btn:hover { background: #004494; }
         
-        /* Navegação (Abas) */
-        .nav-buttons { display: flex; gap: 10px; margin-bottom: 25px; justify-content: center; flex-wrap: wrap; }
-        .nav-btn { flex: 1; min-width: 200px; padding: 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; font-size: 15px; transition: 0.3s; }
-        .active-nav { background: #0056b3; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .inactive-nav { background: #e9ecef; color: #555; }
-        .inactive-nav:hover { background: #dde2e6; }
+        /* Navegação tipo Abas (Tabs) */
+        .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 25px; }
+        .tab-btn { flex: 1; padding: 12px; cursor: pointer; border: none; background: transparent; font-weight: bold; font-size: 16px; color: #666; transition: 0.2s; outline: none; }
+        .tab-btn:hover { color: #0056b3; background: #f8f9fa; }
+        .active-tab { color: #0056b3; border-bottom: 3px solid #0056b3; background: #f8f9fa; }
         
         /* Controle de Telas */
         #tela-calendario, #tela-cadastro { display: none; }
@@ -39,7 +38,7 @@
         input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
         input:focus, select:focus { border-color: #0056b3; outline: none; }
         
-        #loading { text-align: center; font-weight: bold; color: #666; margin: 20px 0; }
+        #loading { text-align: center; font-weight: bold; color: #666; margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffe69c;}
 
         /* Ajustes do Calendário */
         #calendar { margin-top: 20px; font-size: 14px; }
@@ -54,22 +53,21 @@
 <div class="container">
     <h1>Sistema de Frota</h1>
     
-    <!-- Botões de Navegação -->
-    <div class="nav-buttons">
-        <button id="btn-nav-calendario" class="nav-btn active-nav" onclick="mudarTela('calendario')">📅 Ver Calendário</button>
-        <button id="btn-nav-cadastro" class="nav-btn inactive-nav" onclick="mudarTela('cadastro')">➕ Novo Agendamento</button>
+    <!-- Navegação em Abas (Tabs) -->
+    <div class="tabs">
+        <button id="tab-calendario" class="tab-btn active-tab" onclick="mudarTela('calendario')">📅 Calendário de Reservas</button>
+        <button id="tab-cadastro" class="tab-btn" onclick="mudarTela('cadastro')">➕ Fazer Nova Reserva</button>
     </div>
 
     <!-- TELA 1: CALENDÁRIO VISUAL (VISÃO INICIAL) -->
     <div id="tela-calendario" class="active-screen">
-        <h2>Disponibilidade dos Veículos</h2>
         
         <!-- Legenda -->
         <div class="legenda-container" id="container-legenda"></div>
 
-        <button class="btn" style="margin-bottom: 15px; background: #28a745;" onclick="carregarAgendamentos()">🔄 Atualizar Calendário</button>
+        <button class="btn" style="margin-bottom: 15px; background: #28a745; width: auto; font-size: 14px; padding: 8px 15px;" onclick="carregarAgendamentos()">🔄 Atualizar</button>
         
-        <div id="loading">Carregando agendamentos...</div>
+        <div id="loading">Buscando os dados da planilha...</div>
         
         <!-- O Calendário vai aparecer dentro desta div -->
         <div id="calendar"></div>
@@ -77,7 +75,7 @@
 
     <!-- TELA 2: FORMULÁRIO DE CADASTRO -->
     <div id="tela-cadastro">
-        <h2>Reservar Veículo</h2>
+        <h2>Preencha para Reservar</h2>
         <form id="form-agendamento" onsubmit="salvarAgendamento(event)">
             <div class="form-group">
                 <label for="carro">Veículo:</label>
@@ -110,7 +108,7 @@
     // ==========================================
     // 1. COLE AQUI SUA URL DO GOOGLE APPS SCRIPT
     // ==========================================
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbyJjTNr9KaD1oY7xiZGHvSrtGMQxa3AhcdQ9xHeVRfCde7RjbvXbmjGTQCOFzAuhv2n/exec";
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby3N8ffZ2C4jQT6z-sco7rIKyQycxlJ1fuaCGkveVuszUlgqHtqgHpQ3ddKO4AjcMcF/exec";
 
     // ==========================================
     // 2. CONFIGURAÇÃO DE CARROS E SUAS CORES
@@ -123,7 +121,7 @@
         "Carro 5": "#6f42c1"  // Roxo
     };
 
-    let calendarioApp; // Variável que vai guardar o calendário
+    let calendarioApp; 
 
     window.onload = () => {
         gerarConfiguracoes();
@@ -134,26 +132,27 @@
     function mudarTela(tela) {
         const telaCalendario = document.getElementById('tela-calendario');
         const telaCadastro = document.getElementById('tela-cadastro');
-        const btnNavCalendario = document.getElementById('btn-nav-calendario');
-        const btnNavCadastro = document.getElementById('btn-nav-cadastro');
+        const tabCalendario = document.getElementById('tab-calendario');
+        const tabCadastro = document.getElementById('tab-cadastro');
 
         if (tela === 'calendario') {
             telaCalendario.classList.add('active-screen');
             telaCadastro.classList.remove('active-screen');
-            btnNavCalendario.classList.replace('inactive-nav', 'active-nav');
-            btnNavCadastro.classList.replace('active-nav', 'inactive-nav');
+            
+            tabCalendario.classList.add('active-tab');
+            tabCadastro.classList.remove('active-tab');
             
             carregarAgendamentos(); 
             
-            // Corrige o tamanho do calendário caso ele seja aberto pela primeira vez escondido
             if(calendarioApp) {
                 setTimeout(() => calendarioApp.updateSize(), 100);
             }
         } else {
             telaCadastro.classList.add('active-screen');
             telaCalendario.classList.remove('active-screen');
-            btnNavCadastro.classList.replace('inactive-nav', 'active-nav');
-            btnNavCalendario.classList.replace('active-nav', 'inactive-nav');
+            
+            tabCadastro.classList.add('active-tab');
+            tabCalendario.classList.remove('active-tab');
         }
     }
 
@@ -180,10 +179,11 @@
     async function carregarAgendamentos() {
         const loading = document.getElementById('loading');
         loading.style.display = 'block';
+        loading.innerHTML = "Buscando os dados da planilha...";
 
         try {
-            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycbyJjTNr9KaD1oY7xiZGHvSrtGMQxa3AhcdQ9xHeVRfCde7RjbvXbmjGTQCOFzAuhv2n/exec") {
-                loading.innerHTML = "<span style='color:red;'>⚠️ ERRO: Coloque o link do Apps Script no código.</span>";
+            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycby3N8ffZ2C4jQT6z-sco7rIKyQycxlJ1fuaCGkveVuszUlgqHtqgHpQ3ddKO4AjcMcF/exec") {
+                loading.innerHTML = "<strong>⚠️ AVISO IMPORTANTE:</strong><br>Você precisa colocar o link do seu Google Apps Script na linha 105 do código no GitHub para os dados aparecerem.";
                 return;
             }
 
@@ -193,9 +193,8 @@
 
             // Transformar os dados da planilha no formato que o Calendário exige
             const eventosFormatados = dados.map(agendamento => {
-                const cor = configuracaoCarros[agendamento.carro] || "#6c757d"; // Cinza se não achar o carro
+                const cor = configuracaoCarros[agendamento.carro] || "#6c757d"; 
                 
-                // Formato ISO: YYYY-MM-DDTHH:mm:00
                 const dataInicio = `${agendamento.data}T${agendamento.hora_inicio}:00`;
                 const dataFim = `${agendamento.data}T${agendamento.hora_fim}:00`;
 
@@ -211,7 +210,7 @@
             renderizarCalendario(eventosFormatados);
 
         } catch (error) {
-            loading.innerHTML = "<span style='color:red;'>Erro de conexão ao buscar os horários.</span>";
+            loading.innerHTML = "<span style='color:red;'>Erro ao carregar o calendário. Verifique a internet ou o link do Apps Script.</span>";
             console.error(error);
         }
     }
@@ -221,14 +220,12 @@
         const calendarEl = document.getElementById('calendar');
 
         if (calendarioApp) {
-            // Se o calendário já existe, apenas limpa os eventos antigos e coloca os novos
             calendarioApp.removeAllEvents();
             calendarioApp.addEventSource(eventos);
         } else {
-            // Se é a primeira vez, desenha o calendário
             calendarioApp = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth', // Começa mostrando o mês
-                locale: 'pt-br', // Em português
+                initialView: 'dayGridMonth', 
+                locale: 'pt-br', 
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
@@ -241,7 +238,7 @@
                     day: 'Dia'
                 },
                 events: eventos,
-                eventTimeFormat: { // Formata a hora para 14:30
+                eventTimeFormat: { 
                     hour: '2-digit',
                     minute: '2-digit',
                     meridiem: false
@@ -280,7 +277,7 @@
             alert('Reserva concluída e salva na planilha!');
             document.getElementById('form-agendamento').reset();
             
-            // Volta para a tela do calendário e atualiza para mostrar a nova reserva
+            // Volta para a tela do calendário e atualiza
             mudarTela('calendario');
 
         } catch (error) {
