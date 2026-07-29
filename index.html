@@ -11,7 +11,7 @@
     <style>
         /* Estilos Gerais */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1, h2 { text-align: center; color: #333; margin-top: 0;}
         .btn { display: inline-block; padding: 12px 20px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; margin-top: 10px; font-weight: bold; font-size: 16px;}
         .btn:hover { background: #004494; }
@@ -41,17 +41,18 @@
         #loading { text-align: center; font-weight: bold; color: #666; margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffe69c;}
 
         /* Ajustes do Calendário */
-        #calendar { margin-top: 20px; font-size: 14px; }
-        .fc .fc-button-primary { background-color: #0056b3; border-color: #0056b3; }
+        #calendar { margin-top: 10px; font-size: 14px; }
+        .fc .fc-button-primary { background-color: #0056b3; border-color: #0056b3; font-weight: bold; text-transform: capitalize;}
         .fc .fc-button-primary:hover { background-color: #004494; border-color: #004494; }
         .fc .fc-button-primary:disabled { background-color: #6c757d; border-color: #6c757d; }
-        .fc-event { cursor: pointer; padding: 2px 4px; }
+        .fc-event { cursor: pointer; padding: 3px 5px; font-size: 12px; border: none; border-radius: 3px; margin-bottom: 2px;}
+        .fc-toolbar-title { text-transform: capitalize; color: #333; font-size: 1.5em !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Sistema de Frota</h1>
+    <h1>Controle de Frota</h1>
     
     <!-- Navegação em Abas (Tabs) -->
     <div class="tabs">
@@ -59,15 +60,15 @@
         <button id="tab-cadastro" class="tab-btn" onclick="mudarTela('cadastro')">➕ Fazer Nova Reserva</button>
     </div>
 
-    <!-- TELA 1: CALENDÁRIO VISUAL (VISÃO INICIAL) -->
+    <!-- TELA 1: CALENDÁRIO MENSAL (VISÃO INICIAL) -->
     <div id="tela-calendario" class="active-screen">
         
         <!-- Legenda -->
         <div class="legenda-container" id="container-legenda"></div>
 
-        <button class="btn" style="margin-bottom: 15px; background: #28a745; width: auto; font-size: 14px; padding: 8px 15px;" onclick="carregarAgendamentos()">🔄 Atualizar</button>
+        <button class="btn" style="margin-bottom: 5px; background: #28a745; width: auto; font-size: 14px; padding: 8px 15px;" onclick="carregarAgendamentos()">🔄 Atualizar Status</button>
         
-        <div id="loading">Buscando os dados da planilha...</div>
+        <div id="loading">Buscando os status dos veículos...</div>
         
         <!-- O Calendário vai aparecer dentro desta div -->
         <div id="calendar"></div>
@@ -108,7 +109,7 @@
     // ==========================================
     // 1. COLE AQUI SUA URL DO GOOGLE APPS SCRIPT
     // ==========================================
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby3N8ffZ2C4jQT6z-sco7rIKyQycxlJ1fuaCGkveVuszUlgqHtqgHpQ3ddKO4AjcMcF/exec";
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycby8i4ef1AphptDKMJ0BViQgkTUp8MzDTS9Kl-Wd4XUpDirzuOCvWdvd_XqbDkmfEI8E/exec";
 
     // ==========================================
     // 2. CONFIGURAÇÃO DE CARROS E SUAS CORES
@@ -179,11 +180,11 @@
     async function carregarAgendamentos() {
         const loading = document.getElementById('loading');
         loading.style.display = 'block';
-        loading.innerHTML = "Buscando os dados da planilha...";
+        loading.innerHTML = "Buscando os status dos veículos na planilha...";
 
         try {
-            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycby3N8ffZ2C4jQT6z-sco7rIKyQycxlJ1fuaCGkveVuszUlgqHtqgHpQ3ddKO4AjcMcF/exec") {
-                loading.innerHTML = "<strong>⚠️ AVISO IMPORTANTE:</strong><br>Você precisa colocar o link do seu Google Apps Script na linha 105 do código no GitHub para os dados aparecerem.";
+            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycby8i4ef1AphptDKMJ0BViQgkTUp8MzDTS9Kl-Wd4XUpDirzuOCvWdvd_XqbDkmfEI8E/exec") {
+                loading.innerHTML = "<strong>⚠️ AVISO IMPORTANTE:</strong><br>Você precisa colocar o link do seu Google Apps Script na linha 102 do código.";
                 return;
             }
 
@@ -191,31 +192,35 @@
             const dados = await response.json();
             loading.style.display = 'none';
 
-            // Transformar os dados da planilha no formato que o Calendário exige
+            // Transformar os dados da planilha
             const eventosFormatados = dados.map(agendamento => {
                 const cor = configuracaoCarros[agendamento.carro] || "#6c757d"; 
                 
                 const dataInicio = `${agendamento.data}T${agendamento.hora_inicio}:00`;
                 const dataFim = `${agendamento.data}T${agendamento.hora_fim}:00`;
 
+                // Status que aparece no calendário
+                const tituloStatus = `🚗 ${agendamento.carro} | 👤 ${agendamento.nome} (${agendamento.hora_inicio} às ${agendamento.hora_fim})`;
+
                 return {
-                    title: `${agendamento.carro} (${agendamento.nome})`,
+                    title: tituloStatus,
                     start: dataInicio,
                     end: dataFim,
                     backgroundColor: cor,
-                    borderColor: cor
+                    borderColor: cor,
+                    allDay: false // Para garantir que respeite o horário
                 };
             });
 
             renderizarCalendario(eventosFormatados);
 
         } catch (error) {
-            loading.innerHTML = "<span style='color:red;'>Erro ao carregar o calendário. Verifique a internet ou o link do Apps Script.</span>";
+            loading.innerHTML = "<span style='color:red;'>Erro ao carregar os status. Verifique a internet ou o link do Apps Script.</span>";
             console.error(error);
         }
     }
 
-    // Função que constrói o Calendário na tela
+    // Função que constrói o Calendário na tela com botões personalizados
     function renderizarCalendario(eventos) {
         const calendarEl = document.getElementById('calendar');
 
@@ -224,26 +229,40 @@
             calendarioApp.addEventSource(eventos);
         } else {
             calendarioApp = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth', 
+                initialView: 'dayGridMonth', // Visão focada no mês
                 locale: 'pt-br', 
+                
+                // Criando os botões personalizados que você pediu
+                customButtons: {
+                    btnAnterior: {
+                        text: '⬅️ Mês Anterior',
+                        click: function() {
+                            calendarioApp.prev();
+                        }
+                    },
+                    btnSeguinte: {
+                        text: 'Mês Seguinte ➡️',
+                        click: function() {
+                            calendarioApp.next();
+                        }
+                    },
+                    btnHoje: {
+                        text: '📅 Mês Atual',
+                        click: function() {
+                            calendarioApp.today();
+                        }
+                    }
+                },
+                
+                // Organizando o cabeçalho do calendário
                 headerToolbar: {
-                    left: 'prev,next today',
+                    left: 'btnAnterior,btnSeguinte',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                    right: 'btnHoje'
                 },
-                buttonText: {
-                    today: 'Hoje',
-                    month: 'Mês',
-                    week: 'Semana',
-                    day: 'Dia'
-                },
+                
                 events: eventos,
-                eventTimeFormat: { 
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    meridiem: false
-                },
-                displayEventEnd: true,
+                displayEventTime: false, // Esconde a hora padrão do FullCalendar para usarmos a nossa no título
                 contentHeight: 'auto'
             });
             calendarioApp.render();
