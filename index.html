@@ -3,162 +3,243 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Frota</title>
+    <title>Sistema de Gestão de Frota</title>
     
-    <!-- Importando a biblioteca de Calendário (FullCalendar) -->
+    <!-- FullCalendar -->
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     
     <style>
-        /* Estilos Gerais */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1, h2 { text-align: center; color: #333; margin-top: 0;}
-        .btn { display: inline-block; padding: 12px 20px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; margin-top: 10px; font-weight: bold; font-size: 16px;}
-        .btn:hover { background: #004494; }
         
-        /* Navegação tipo Abas (Tabs) */
-        .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 25px; }
-        .tab-btn { flex: 1; padding: 12px; cursor: pointer; border: none; background: transparent; font-weight: bold; font-size: 16px; color: #666; transition: 0.2s; outline: none; }
+        .btn { display: inline-block; padding: 12px 20px; background: #0056b3; color: white; border: none; border-radius: 4px; cursor: pointer; text-align: center; width: 100%; font-weight: bold; font-size: 15px;}
+        .btn:hover { background: #004494; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #bb2d3b; }
+        
+        /* Modal de Login */
+        #modal-login { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .login-box { background: white; padding: 30px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        
+        /* Cabeçalho do Usuário */
+        .user-header { display: flex; justify-content: space-between; align-items: center; background: #e9ecef; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; }
+        .user-badge { font-weight: bold; color: #0056b3; }
+        .admin-badge { background: #dc3545; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; }
+
+        /* Abas */
+        .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 12px; cursor: pointer; border: none; background: transparent; font-weight: bold; font-size: 15px; color: #666; transition: 0.2s; }
         .tab-btn:hover { color: #0056b3; background: #f8f9fa; }
         .active-tab { color: #0056b3; border-bottom: 3px solid #0056b3; background: #f8f9fa; }
         
-        /* Controle de Telas */
-        #tela-calendario, #tela-cadastro { display: none; }
-        .active-screen { display: block !important; animation: fadeIn 0.4s; }
+        /* Telas */
+        .tela { display: none; }
+        .active-screen { display: block !important; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* Legenda de Cores */
-        .legenda-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px; border: 1px solid #eee; }
-        .item-legenda { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: #333; }
-        .cor-box { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(0,0,0,0.1); }
+        /* Legenda */
+        .legenda-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #eee; }
+        .item-legenda { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: bold; color: #333; }
+        .cor-box { width: 16px; height: 16px; border-radius: 3px; }
         
-        /* Formulário */
+        /* Formulários e Tabelas */
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #444; }
-        input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
-        input:focus, select:focus { border-color: #0056b3; outline: none; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
         
-        #loading { text-align: center; font-weight: bold; color: #666; margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffe69c;}
-
-        /* Ajustes do Calendário */
-        #calendar { margin-top: 10px; font-size: 14px; }
-        .fc .fc-button-primary { background-color: #0056b3; border-color: #0056b3; font-weight: bold; text-transform: capitalize;}
-        .fc .fc-button-primary:hover { background-color: #004494; border-color: #004494; }
-        .fc .fc-button-primary:disabled { background-color: #6c757d; border-color: #6c757d; }
-        .fc-event { cursor: pointer; padding: 3px 5px; font-size: 12px; border: none; border-radius: 3px; margin-bottom: 2px;}
-        .fc-toolbar-title { text-transform: capitalize; color: #333; font-size: 1.5em !important; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 10px; border: 1px solid #ddd; text-align: left; font-size: 14px; }
+        th { background: #f4f4f4; }
+        
+        #loading { text-align: center; font-weight: bold; color: #666; padding: 15px; background: #fff3cd; border-radius: 5px; border: 1px solid #ffe69c; margin-bottom: 15px; }
+        #calendar { margin-top: 10px; }
     </style>
 </head>
 <body>
 
+<!-- MODAL DE LOGIN -->
+<div id="modal-login">
+    <div class="login-box">
+        <h2>Acesso ao Sistema</h2>
+        <div class="form-group">
+            <label for="login-nome">Seu Nome:</label>
+            <input type="text" id="login-nome" placeholder="Digite seu nome completo">
+        </div>
+        <div class="form-group">
+            <label for="login-perfil">Perfil de Acesso:</label>
+            <select id="login-perfil" onchange="toggleSenhaAdmin()">
+                <option value="usuario">Usuário Comum</option>
+                <option value="admin">Administrador</option>
+            </select>
+        </div>
+        <div class="form-group" id="group-senha-admin" style="display: none;">
+            <label for="login-senha">Senha Admin:</label>
+            <input type="password" id="login-senha" placeholder="Digite a senha de administrador">
+        </div>
+        <button class="btn" onclick="efetuarLogin()">Entrar no Sistema</button>
+    </div>
+</div>
+
 <div class="container">
     <h1>Controle de Frota</h1>
     
-    <!-- Navegação em Abas (Tabs) -->
+    <!-- CABEÇALHO DO USUÁRIO LOGADO -->
+    <div class="user-header">
+        <div>
+            Usuário: <span id="lbl-usuario" class="user-badge">-</span>
+            <span id="lbl-admin-tag" class="admin-badge" style="display: none;">ADMIN</span>
+        </div>
+        <button class="btn btn-danger" style="width: auto; padding: 5px 12px; font-size: 12px;" onclick="logout()">Sair</button>
+    </div>
+    
+    <!-- ABAS -->
     <div class="tabs">
-        <button id="tab-calendario" class="tab-btn active-tab" onclick="mudarTela('calendario')">📅 Calendário de Reservas</button>
-        <button id="tab-cadastro" class="tab-btn" onclick="mudarTela('cadastro')">➕ Fazer Nova Reserva</button>
+        <button id="tab-calendario" class="tab-btn active-tab" onclick="mudarTela('calendario')">📅 Mês Vigente</button>
+        <button id="tab-cadastro" class="tab-btn" onclick="mudarTela('cadastro')">➕ Agendar Veículo</button>
+        <button id="tab-admin" class="tab-btn" style="display: none;" onclick="mudarTela('admin')">⚙️ Painel Admin</button>
     </div>
 
-    <!-- TELA 1: CALENDÁRIO MENSAL (VISÃO INICIAL) -->
-    <div id="tela-calendario" class="active-screen">
-        
-        <!-- Legenda -->
+    <!-- TELA 1: CALENDÁRIO DO MÊS VIGENTE -->
+    <div id="tela-calendario" class="tela active-screen">
         <div class="legenda-container" id="container-legenda"></div>
-
-        <button class="btn" style="margin-bottom: 5px; background: #28a745; width: auto; font-size: 14px; padding: 8px 15px;" onclick="carregarAgendamentos()">🔄 Atualizar Status</button>
-        
-        <div id="loading">Buscando os status dos veículos...</div>
-        
-        <!-- O Calendário vai aparecer dentro desta div -->
+        <button class="btn" style="margin-bottom: 10px; background: #28a745; width: auto; font-size: 13px; padding: 6px 12px;" onclick="carregarAgendamentos()">🔄 Atualizar Calendário</button>
+        <div id="loading">Carregando agendamentos...</div>
         <div id="calendar"></div>
     </div>
 
-    <!-- TELA 2: FORMULÁRIO DE CADASTRO -->
-    <div id="tela-cadastro">
-        <h2>Preencha para Reservar</h2>
+    <!-- TELA 2: FORMULÁRIO DE AGENDAMENTO -->
+    <div id="tela-cadastro" class="tela">
+        <h2>Novo Agendamento</h2>
         <form id="form-agendamento" onsubmit="salvarAgendamento(event)">
             <div class="form-group">
                 <label for="carro">Veículo:</label>
                 <select id="carro" required></select>
             </div>
             <div class="form-group">
-                <label for="nome">Nome do Motorista / Responsável:</label>
-                <input type="text" id="nome" required placeholder="Digite o nome de quem vai usar">
+                <label for="nome">Responsável / Motorista:</label>
+                <input type="text" id="nome" required readonly style="background-color: #e9ecef;">
             </div>
             <div class="form-group">
-                <label for="data">Data de Utilização:</label>
+                <label for="data">Data do Agendamento:</label>
                 <input type="date" id="data" required>
             </div>
             <div class="form-group" style="display: flex; gap: 10px;">
                 <div style="flex: 1;">
-                    <label for="hora_inicio">Saída (Hora):</label>
+                    <label for="hora_inicio">Hora Saída:</label>
                     <input type="time" id="hora_inicio" required>
                 </div>
                 <div style="flex: 1;">
-                    <label for="hora_fim">Retorno (Hora):</label>
+                    <label for="hora_fim">Hora Retorno:</label>
                     <input type="time" id="hora_fim" required>
                 </div>
             </div>
-            <button type="submit" class="btn" id="btn-submit">Confirmar Reserva</button>
+            <button type="submit" class="btn" id="btn-submit">Confirmar Agendamento</button>
         </form>
+    </div>
+
+    <!-- TELA 3: PAINEL ADMINISTRATIVO -->
+    <div id="tela-admin" class="tela">
+        <h2>Gestão Geral de Agendamentos</h2>
+        <p>Como Administrador, você pode visualizar e excluir reservas existentes.</p>
+        <table id="tabela-admin">
+            <thead>
+                <tr>
+                    <th>Veículo</th>
+                    <th>Motorista</th>
+                    <th>Data</th>
+                    <th>Horário</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-admin"></tbody>
+        </table>
     </div>
 </div>
 
 <script>
-    // ==========================================
-    // 1. COLE AQUI SUA URL DO GOOGLE APPS SCRIPT
-    // ==========================================
-    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbwFn8iMkUgDzp9-b5e97PDmFfTHx0-XwYEtoTQUS29Wd2-x0IyOAi4-QK5kogaNUzLZ/exec";
+    const URL_GOOGLE_SCRIPT = "https://script.google.com/macros/s/AKfycbyHxvy4joQiM6zA9_GUjMaiaArI2Mz_mU0Jjr2hdcFcVqy0qOyO9k6Yzb6IT3Gickzn/exec";
 
-    // ==========================================
-    // 2. CONFIGURAÇÃO DE CARROS E SUAS CORES
-    // ==========================================
     const configuracaoCarros = {
-        "Carro 1": "#0d6efd", // Azul 
-        "Carro 2": "#198754", // Verde
-        "Carro 3": "#dc3545", // Vermelho
-        "Carro 4": "#fd7e14", // Laranja
-        "Carro 5": "#6f42c1"  // Roxo
+        "Carro 1": "#0d6efd",
+        "Carro 2": "#198754",
+        "Carro 3": "#dc3545",
+        "Carro 4": "#fd7e14",
+        "Carro 5": "#6f42c1"
     };
 
-    let calendarioApp; 
-    let agendamentosAtuais = []; // Armazena as reservas para verificação de disponibilidade
+    let usuarioLogado = null;
+    let ehAdmin = false;
+    let calendarioApp = null;
+    let agendamentosAtuais = [];
 
-    window.onload = () => {
+    // --- AUTENTICAÇÃO E LOGIN ---
+    function toggleSenhaAdmin() {
+        const perfil = document.getElementById('login-perfil').value;
+        document.getElementById('group-senha-admin').style.display = (perfil === 'admin') ? 'block' : 'none';
+    }
+
+    function efetuarLogin() {
+        const nome = document.getElementById('login-nome').value.trim();
+        const perfil = document.getElementById('login-perfil').value;
+        const senha = document.getElementById('login-senha').value;
+
+        if (!nome) {
+            alert('Por favor, informe seu nome.');
+            return;
+        }
+
+        if (perfil === 'admin') {
+            if (senha !== 'admin123') { // SENHA PADRÃO DO ADMIN
+                alert('Senha de Administrador incorreta!');
+                return;
+            }
+            ehAdmin = true;
+        } else {
+            ehAdmin = false;
+        }
+
+        usuarioLogado = nome;
+        document.getElementById('lbl-usuario').innerText = usuarioLogado;
+        document.getElementById('nome').value = usuarioLogado;
+        
+        if (ehAdmin) {
+            document.getElementById('lbl-admin-tag').style.display = 'inline';
+            document.getElementById('tab-admin').style.display = 'block';
+        } else {
+            document.getElementById('lbl-admin-tag').style.display = 'none';
+            document.getElementById('tab-admin').style.display = 'none';
+        }
+
+        document.getElementById('modal-login').style.display = 'none';
         gerarConfiguracoes();
         carregarAgendamentos();
-    };
+    }
 
-    // Alternar entre Telas
+    function logout() {
+        usuarioLogado = null;
+        ehAdmin = false;
+        document.getElementById('modal-login').style.display = 'flex';
+        document.getElementById('login-nome').value = '';
+        document.getElementById('login-senha').value = '';
+    }
+
+    // --- TROCA DE TELAS ---
     function mudarTela(tela) {
-        const telaCalendario = document.getElementById('tela-calendario');
-        const telaCadastro = document.getElementById('tela-cadastro');
-        const tabCalendario = document.getElementById('tab-calendario');
-        const tabCadastro = document.getElementById('tab-cadastro');
+        document.querySelectorAll('.tela').forEach(t => t.classList.remove('active-screen'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+
+        document.getElementById(`tela-${tela}`).classList.add('active-screen');
+        document.getElementById(`tab-${tela}`).classList.add('active-tab');
 
         if (tela === 'calendario') {
-            telaCalendario.classList.add('active-screen');
-            telaCadastro.classList.remove('active-screen');
-            
-            tabCalendario.classList.add('active-tab');
-            tabCadastro.classList.remove('active-tab');
-            
-            carregarAgendamentos(); 
-            
-            if(calendarioApp) {
-                setTimeout(() => calendarioApp.updateSize(), 100);
-            }
-        } else {
-            telaCadastro.classList.add('active-screen');
-            telaCalendario.classList.remove('active-screen');
-            
-            tabCadastro.classList.add('active-tab');
-            tabCalendario.classList.remove('active-tab');
+            carregarAgendamentos();
+            if (calendarioApp) setTimeout(() => calendarioApp.updateSize(), 100);
+        } else if (tela === 'admin') {
+            renderizarTabelaAdmin();
         }
     }
 
-    // Gera a Legenda de Cores e Opções do Formulário
     function gerarConfiguracoes() {
         const containerLegenda = document.getElementById('container-legenda');
         const selectCarro = document.getElementById('carro');
@@ -177,88 +258,48 @@
         }
     }
 
-    // Buscar dados da planilha e guardar na memória
+    // --- CARREGAMENTO DE DADOS ---
     async function carregarAgendamentos() {
         const loading = document.getElementById('loading');
         loading.style.display = 'block';
-        loading.innerHTML = "Buscando os status dos veículos na planilha...";
 
         try {
-            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycbwYJDwW-FZoV6ZhpKY3sc75zlaEGdQ-qnSscfb2eDmb-qPYzo7WIJHRVg2ndu4gNxMe/exec") {
-                loading.innerHTML = "<strong>⚠️ AVISO IMPORTANTE:</strong><br>Você precisa colocar o link do seu Google Apps Script na linha 105 do código.";
+            if (URL_GOOGLE_SCRIPT === "https://script.google.com/macros/s/AKfycbyHxvy4joQiM6zA9_GUjMaiaArI2Mz_mU0Jjr2hdcFcVqy0qOyO9k6Yzb6IT3Gickzn/exec") {
+                loading.innerHTML = "⚠️ Configurar a URL do Apps Script no código.";
                 return;
             }
 
             const response = await fetch(URL_GOOGLE_SCRIPT);
-            agendamentosAtuais = await response.json(); // Guarda a lista atual de reservas
+            agendamentosAtuais = await response.json();
             loading.style.display = 'none';
 
-            // Transformar os dados para exibir no calendário
-            const eventosFormatados = agendamentosAtuais.map(agendamento => {
-                const cor = configuracaoCarros[agendamento.carro] || "#6c757d"; 
-                
-                const dataInicio = `${agendamento.data}T${agendamento.hora_inicio}:00`;
-                const dataFim = `${agendamento.data}T${agendamento.hora_fim}:00`;
+            const eventos = agendamentosAtuais.map(a => ({
+                title: `🚗 ${a.carro} | 👤 ${a.nome} (${a.hora_inicio} às ${a.hora_fim})`,
+                start: `${a.data}T${a.hora_inicio}:00`,
+                end: `${a.data}T${a.hora_fim}:00`,
+                backgroundColor: configuracaoCarros[a.carro] || "#6c757d",
+                borderColor: configuracaoCarros[a.carro] || "#6c757d"
+            }));
 
-                const tituloStatus = `🚗 ${agendamento.carro} | 👤 ${agendamento.nome} (${agendamento.hora_inicio} às ${agendamento.hora_fim})`;
-
-                return {
-                    title: tituloStatus,
-                    start: dataInicio,
-                    end: dataFim,
-                    backgroundColor: cor,
-                    borderColor: cor,
-                    allDay: false
-                };
-            });
-
-            renderizarCalendario(eventosFormatados);
+            renderizarCalendario(eventos);
+            if (ehAdmin) renderizarTabelaAdmin();
 
         } catch (error) {
-            loading.innerHTML = "<span style='color:red;'>Erro ao carregar os status. Verifique a internet ou o link do Apps Script.</span>";
-            console.error(error);
+            loading.innerHTML = "<span style='color:red;'>Erro ao carregar dados.</span>";
         }
     }
 
-    // Renderiza o Calendário na Tela
     function renderizarCalendario(eventos) {
         const calendarEl = document.getElementById('calendar');
-
         if (calendarioApp) {
             calendarioApp.removeAllEvents();
             calendarioApp.addEventSource(eventos);
         } else {
             calendarioApp = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
-                locale: 'pt-br', 
-                
-                customButtons: {
-                    btnAnterior: {
-                        text: '⬅️ Mês Anterior',
-                        click: function() {
-                            calendarioApp.prev();
-                        }
-                    },
-                    btnSeguinte: {
-                        text: 'Mês Seguinte ➡️',
-                        click: function() {
-                            calendarioApp.next();
-                        }
-                    },
-                    btnHoje: {
-                        text: '📅 Mês Atual',
-                        click: function() {
-                            calendarioApp.today();
-                        }
-                    }
-                },
-                
-                headerToolbar: {
-                    left: 'btnAnterior,btnSeguinte',
-                    center: 'title',
-                    right: 'btnHoje'
-                },
-                
+                locale: 'pt-br',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
+                buttonText: { today: 'Mês Atual' },
                 events: eventos,
                 displayEventTime: false,
                 contentHeight: 'auto'
@@ -267,64 +308,94 @@
         }
     }
 
-    // Salvar novo agendamento com VERIFICAÇÃO DE DISPONIBILIDADE
+    // --- NOVO AGENDAMENTO COM VALIDAÇÃO ---
     async function salvarAgendamento(event) {
         event.preventDefault();
         
         const carro = document.getElementById('carro').value;
-        const nome = document.getElementById('nome').value;
+        const nome = usuarioLogado;
         const data = document.getElementById('data').value;
         const hora_inicio = document.getElementById('hora_inicio').value;
         const hora_fim = document.getElementById('hora_fim').value;
 
-        // 1. Validação básica: Hora final deve ser após a hora inicial
         if (hora_fim <= hora_inicio) {
             alert('A hora de retorno deve ser posterior à hora de saída.');
             return;
         }
 
-        // 2. Validação de conflito: Verifica se o mesmo carro já possui agendamento no mesmo horário
-        const conflito = agendamentosAtuais.some(agendamento => {
-            if (agendamento.carro === carro && agendamento.data === data) {
-                // Checa sobreposição de horário
-                // Existe sobreposição se: (novaSaida < reservaFim) E (novaRetorno > reservaInicio)
-                return (hora_inicio < agendamento.hora_fim && hora_fim > agendamento.hora_inicio);
+        // Validação de Conflito de Horário
+        const conflito = agendamentosAtuais.some(a => {
+            if (a.carro === carro && a.data === data) {
+                return (hora_inicio < a.hora_fim && hora_fim > a.hora_inicio);
             }
             return false;
         });
 
         if (conflito) {
-            alert('Carro indisponível.');
+            alert('Carro indisponível para agendamento.');
             return;
         }
 
-        // Se estiver livre, prossegue com o salvamento
         const btnSubmit = document.getElementById('btn-submit');
-        btnSubmit.innerText = "Salvando na planilha...";
+        btnSubmit.innerText = "Processando...";
         btnSubmit.disabled = true;
-
-        const dados = { carro, nome, data, hora_inicio, hora_fim };
 
         try {
             await fetch(URL_GOOGLE_SCRIPT, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
+                body: JSON.stringify({ acao: 'salvar', carro, nome, data, hora_inicio, hora_fim })
             });
 
-            alert('Reserva concluída e salva na planilha!');
+            alert('Agendamento realizado com sucesso!');
             document.getElementById('form-agendamento').reset();
-            
-            // Volta para a tela do calendário e atualiza
+            document.getElementById('nome').value = usuarioLogado;
             mudarTela('calendario');
 
         } catch (error) {
-            alert('Falha ao salvar. Verifique a internet.');
-            console.error(error);
+            alert('Erro ao realizar o agendamento.');
         } finally {
-            btnSubmit.innerText = "Confirmar Reserva";
+            btnSubmit.innerText = "Confirmar Agendamento";
             btnSubmit.disabled = false;
+        }
+    }
+
+    // --- FUNÇÕES EXCLUSIVAS DO ADMIN ---
+    function renderizarTabelaAdmin() {
+        const tbody = document.getElementById('tbody-admin');
+        tbody.innerHTML = '';
+
+        agendamentosAtuais.forEach((a, index) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${a.carro}</td>
+                    <td>${a.nome}</td>
+                    <td>${a.data}</td>
+                    <td>${a.hora_inicio} às ${a.hora_fim}</td>
+                    <td>
+                        <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px; width: auto;" onclick="excluirAgendamento('${a.carro}', '${a.data}', '${a.hora_inicio}')">Cancelar</button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+
+    async function excluirAgendamento(carro, data, hora_inicio) {
+        if (!confirm(`Confirmar o cancelamento do agendamento do ${carro} em ${data}?`)) return;
+
+        try {
+            await fetch(URL_GOOGLE_SCRIPT, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'excluir', carro, data, hora_inicio })
+            });
+
+            alert('Agendamento removido!');
+            carregarAgendamentos();
+        } catch (e) {
+            alert('Erro ao excluir agendamento.');
         }
     }
 </script>
